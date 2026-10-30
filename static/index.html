@@ -40,7 +40,7 @@
           <div class="count">目前報名人數：${e.reg_count} 人</div>
           ${e.is_closed
             ? `<span class="btn closed">已截止</span>`
-            : `<a class="btn" href="/register?event_id=${e.id}">前往報名</a>`}
+            : `<a class="btn" href="/register/${e.id}">前往報名</a>`}
         </div>
       `).join("");
     }

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>報名清單：{{ event.title }}</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; padding: 24px; }
+    .box { max-width: 640px; margin: auto; background: #fff; padding: 24px;
+           border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>{{ event.title }} 報名清單</h2>
+    <p>共 {{ registrations|length }} 人</p>
+
+    {% if registrations %}
+    <table>
+      <tr><th>#</th><th>姓名</th><th>電話</th><th>報名時間</th></tr>
+      {% for r in registrations %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ r.name }}</td>
+        <td>{{ r.phone }}</td>
+        <td>{{ r.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+      <p>目前還沒有人報名</p>
+    {% endif %}
+
+    <p><a href="/">← 回活動清單</a></p>
+  </div>
+</body>
+</html>

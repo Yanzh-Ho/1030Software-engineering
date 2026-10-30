@@ -1,80 +1,96 @@
+import sqlite3
 from fastapi import APIRouter, HTTPException, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from DB import get_db_connection
 
 router = APIRouter()
 templates = Jinja2Templates(directory="template")
 
-@router.get("/register/{activity_id}", response_class=HTMLResponse)
-def show_registration_form(request: Request, activity_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-    
-    # Fetch activity details
-    cursor.execute("SELECT * FROM activities WHERE id = %s;", (activity_id,))
-    activity = cursor.fetchone()
-    
-    if not activity:
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=404, detail="Activity not found")
-    
-    # Get current participant count
-    cursor.execute("SELECT COUNT(*) as total FROM registrations WHERE activity_id = %s;", (activity_id,))
-    count_result = cursor.fetchone()
-    participant_count = count_result["total"] if count_result else 0
-    
-    cursor.close()
+
+def get_db():
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def get_event(conn, event_id):
+    return conn.execute(
+        "SELECT * FROM events WHERE id = ?", (event_id,)
+    ).fetchone()
+
+
+# 1. 顯示報名表
+@router.get("/register/{event_id}", response_class=HTMLResponse)
+def show_registration_form(request: Request, event_id: int):
+    conn = get_db()
+    event = get_event(conn, event_id)
     conn.close()
-    
-    return templates.TemplateResponse("register.html", {
-        "request": request, 
-        "activity": activity, 
-        "participant_count": participant_count
-    })
+    if not event:
+        raise HTTPException(status_code=404, detail="找不到該活動")
+    return templates.TemplateResponse(
+        request, "register.html", {"event": event}
+    )
 
-@router.post("/register/{activity_id}")
-def submit_registration(request: Request, activity_id: int, name: str = Form(...), phone: str = Form(...)):
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-    
-    # Fetch activity details to pass back to template
-    cursor.execute("SELECT * FROM activities WHERE id = %s;", (activity_id,))
-    activity = cursor.fetchone()
-    
-    # Get current participant count
-    cursor.execute("SELECT COUNT(*) as total FROM registrations WHERE activity_id = %s;", (activity_id,))
-    count_result = cursor.fetchone()
-    participant_count = count_result["total"] if count_result else 0
-    
-    # Check for duplicate registration (Same Name and Phone for the same Activity)
-    cursor.execute("SELECT id FROM registrations WHERE activity_id = %s AND name = %s AND phone = %s;", (activity_id, name, phone))
-    if cursor.fetchone():
-        cursor.close()
+
+# 2. 送出報名（含防重複）
+@router.post("/register/{event_id}", response_class=HTMLResponse)
+def submit_registration(
+    request: Request,
+    event_id: int,
+    name: str = Form(...),
+    phone: str = Form(...),
+):
+    conn = get_db()
+    event = get_event(conn, event_id)
+    if not event:
         conn.close()
-        return templates.TemplateResponse("register.html", {
-            "request": request, 
-            "activity": activity, 
-            "participant_count": participant_count,
-            "error": "You have already registered for this activity!"
-        })
+        raise HTTPException(status_code=404, detail="找不到該活動")
 
-    # Insert new registration record
-    cursor.execute("INSERT INTO registrations (activity_id, name, phone) VALUES (%s, %s, %s);", (activity_id, name, phone))
+    if event["is_closed"]:
+        conn.close()
+        return templates.TemplateResponse(
+            request, "register.html",
+            {"event": event, "error": "此活動已截止報名"},
+        )
+
+    dup = conn.execute(
+        "SELECT id FROM registrations WHERE event_id = ? AND name = ? AND phone = ?",
+        (event_id, name, phone),
+    ).fetchone()
+    if dup:
+        conn.close()
+        return templates.TemplateResponse(
+            request, "register.html",
+            {"event": event, "error": "您已報名過此活動！"},
+        )
+
+    conn.execute(
+        "INSERT INTO registrations (event_id, name, phone) VALUES (?, ?, ?)",
+        (event_id, name, phone),
+    )
     conn.commit()
-    
-    # Update participant count after successful registration
-    participant_count += 1
-    
-    cursor.close()
     conn.close()
-    
-    return templates.TemplateResponse("register.html", {
-        "request": request, 
-        "activity": activity, 
-        "participant_count": participant_count,
-        "success": "Registration successful!"
-    })
+    return templates.TemplateResponse(
+        request, "register.html",
+        {"event": event, "success": "報名成功！"},
+    )
+
+
+# 3. 查看活動報名清單
+@router.get("/events/{event_id}/registrations", response_class=HTMLResponse)
+def show_registrations(request: Request, event_id: int):
+    conn = get_db()
+    event = get_event(conn, event_id)
+    if not event:
+        conn.close()
+        raise HTTPException(status_code=404, detail="找不到該活動")
+    rows = conn.execute(
+        "SELECT name, phone, created_at FROM registrations "
+        "WHERE event_id = ? ORDER BY created_at",
+        (event_id,),
+    ).fetchall()
+    conn.close()
+    return templates.TemplateResponse(
+        request, "registrations.html",
+        {"event": event, "registrations": rows},
+    )

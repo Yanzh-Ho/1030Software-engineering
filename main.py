@@ -54,6 +54,7 @@ def close_event(event_id: int):
     conn.close()
     return {"message": f"活動編號 {event_id} 已成功截止報名"}
 
+# ===== 組員 B：活動清單 + 首頁 =====
 @app.get("/api/events")
 def list_events():
     conn = get_db()
@@ -71,3 +72,8 @@ def list_events():
 @app.get("/")
 def home():
     return FileResponse("static/index.html")
+
+
+# ===== 組員 C：報名功能 =====
+from route.registration import router as registration_router
+app.include_router(registration_router)
