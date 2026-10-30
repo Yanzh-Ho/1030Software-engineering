@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動報名系統</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; }
+        body { background-color: #f8fafc; margin: 0; padding: 40px 20px; color: #1e293b; }
+        .container { max-width: 900px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; position: relative; }
+        h1 { margin-bottom: 8px; font-size: 32px; font-weight: 700; color: #0f172a; }
+        p.subtitle { color: #64748b; margin-top: 0; font-size: 15px; }
+
+        /* 頂部操作按鈕區 */
+        .top-actions { display: flex; justify-content: flex-end; margin-bottom: 25px; }
+        .btn-create { background-color: #059669; color: white; padding: 10px 18px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 14px; transition: background 0.2s; }
+        .btn-create:hover { background-color: #047857; }
+
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 24px; }
+        .card { background: #ffffff; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; justify-content: space-between; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+        .badge-open { background-color: #dcfce7; color: #166534; }
+        .badge-closed { background-color: #fee2e2; color: #991b1b; }
+        .card h3 { margin: 0 0 10px 0; font-size: 18px; color: #0f172a; }
+        .card p.desc { color: #475569; font-size: 14px; line-height: 1.5; min-height: 42px; margin-bottom: 16px; }
+        .meta-info { font-size: 13px; color: #64748b; margin-bottom: 16px; font-weight: 500; }
+
+        .btn-group { display: flex; gap: 8px; }
+        .btn { display: block; width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; }
+        .btn-primary { background-color: #2563eb; color: #ffffff; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-secondary { background-color: #e2e8f0; color: #334155; }
+        .btn-secondary:hover { background-color: #cbd5e1; }
+        .btn-disabled { background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+
+        /* 彈窗樣式 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); justify-content: center; align-items: center; z-index: 50; }
+        .modal-content { background: white; border-radius: 12px; padding: 28px; width: 90%; max-width: 440px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        .modal-content h2 { margin-top: 0; font-size: 20px; color: #0f172a; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #334155; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
+        .form-group input:focus, .form-group textarea:focus { border-color: #2563eb; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+        
+        .roster-list { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        .roster-list th, .roster-list td { border-bottom: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
+        .roster-list th { background: #f8fafc; color: #475569; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>活動報名系統</h1>
+            <p class="subtitle">瀏覽開放活動並填表報名參加</p>
+        </header>
+
+        <!-- 新增活動按鈕 -->
+        <div class="top-actions">
+            <button class="btn-create" onclick="openCreateModal()">➕ 新增新的活動</button>
+        </div>
+
+        <div id="eventList" class="card-grid">
+            <p>載入活動中...</p>
+        </div>
+    </div>
+
+    <!-- 1. 新增活動視窗 -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <h2>新增活動</h2>
+            <div class="form-group">
+                <label>活動名稱 *</label>
+                <input type="text" id="newTitle" placeholder="例如：期末羽球交流賽">
+            </div>
+            <div class="form-group">
+                <label>活動說明</label>
+                <textarea id="newDesc" rows="3" placeholder="請輸入活動細節或時間地點"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="submitCreateEvent()">建立活動</button>
+                <button class="btn btn-secondary" onclick="closeModal('createModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 報名視窗 -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">填寫報名資訊</h2>
+            <div class="form-group">
+                <label>姓名 *</label>
+                <input type="text" id="regName" placeholder="請輸入姓名">
+            </div>
+            <div class="form-group">
+                <label>聯絡電話 *</label>
+                <input type="tel" id="regPhone" placeholder="例如：0912345678">
+                <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">請輸入有效的電話號碼（例：0912345678）</small>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="submitRegister()">確認送出</button>
+                <button class="btn btn-secondary" onclick="closeModal('registerModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 查看名單視窗 -->
+    <div id="rosterModal" class="modal">
+        <div class="modal-content">
+            <h2 id="rosterTitle">報名清單</h2>
+            <div id="rosterContainer" style="max-height: 250px; overflow-y: auto;">載入中...</div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('rosterModal')">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentEventId = null;
+
+        async function fetchEvents() {
+            try {
+                const res = await fetch('/api/events');
+                const events = await res.json();
+                const container = document.getElementById('eventList');
+
+                if (events.length === 0) {
+                    container.innerHTML = '<p>目前尚無任何活動，請點擊上方按鈕新增活動！</p>';
+                    return;
+                }
+
+                container.innerHTML = events.map(ev => `
+                    <div class="card">
+                        <div>
+                            <span class="badge ${ev.is_closed ? 'badge-closed' : 'badge-open'}">
+                                ${ev.is_closed ? '已截止報名' : '現正開放中'}
+                            </span>
+                            <h3>${escapeHtml(ev.title)}</h3>
+                            <p class="desc">${escapeHtml(ev.description || '無詳細說明')}</p>
+                        </div>
+                        <div>
+                            <div class="meta-info">👥 已報名人數：${ev.participant_count || 0} 人</div>
+                            <div class="btn-group">
+                                ${ev.is_closed 
+                                    ? '<button class="btn btn-disabled" disabled>已截止</button>'
+                                    : `<button class="btn btn-primary" onclick="openRegisterModal(${ev.id}, '${escapeHtml(ev.title)}')">報名</button>`
+                                }
+                                <button class="btn btn-secondary" onclick="openRosterModal(${ev.id}, '${escapeHtml(ev.title)}')">名單</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                document.getElementById('eventList').innerHTML = '<p style="color:red;">無法載入活動列表，請確認後端運行中。</p>';
+            }
+        }
+
+        // 新增活動相關
+        function openCreateModal() {
+            document.getElementById('newTitle').value = '';
+            document.getElementById('newDesc').value = '';
+            document.getElementById('createModal').style.display = 'flex';
+        }
+
+        async function submitCreateEvent() {
+            const title = document.getElementById('newTitle').value.trim();
+            const description = document.getElementById('newDesc').value.trim();
+
+            if (!title) {
+                alert('請輸入活動名稱！');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert('新增失敗：' + (data.detail || '請稍後再試'));
+                } else {
+                    alert('🎉 活動新增成功！');
+                    closeModal('createModal');
+                    fetchEvents();
+                }
+            } catch (err) {
+                alert('伺服器連線失敗！');
+            }
+        }
+
+        // 報名相關
+        function openRegisterModal(id, title) {
+            currentEventId = id;
+            document.getElementById('modalTitle').innerText = '報名：' + title;
+            document.getElementById('regName').value = '';
+            document.getElementById('regPhone').value = '';
+            document.getElementById('registerModal').style.display = 'flex';
+        }
+
+        async function submitRegister() {
+            const name = document.getElementById('regName').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+
+            if (!name) {
+                alert('請填寫姓名！');
+                return;
+            }
+
+            // 前端電話格式驗證：檢查是否只包含數字且符合台灣電話規格
+            const phoneRegex = /^09\d{8}$|^\d{7,10}$/;
+            const phoneClean = phone.replace(/[-\s]/g, '');
+
+            if (!phoneRegex.test(phoneClean)) {
+                alert('⚠️ 電話格式不正確！\n請輸入有效的電話號碼（例如：0912345678），不能包含英文字母或非電話字元。');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/events/${currentEventId}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, phone: phoneClean })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    alert('報名失敗：' + (data.detail || '資料驗證錯誤'));
+                } else {
+                    alert('🎉 ' + data.message);
+                    closeModal('registerModal');
+                    fetchEvents();
+                }
+            } catch (err) {
+                alert('送出失敗，請檢查網路連線。');
+            }
+        }
+
+        // 查看名冊
+        async function openRosterModal(id, title) {
+            document.getElementById('rosterTitle').innerText = title + ' - 報名名單';
+            const rosterContainer = document.getElementById('rosterContainer');
+            rosterContainer.innerHTML = '載入名冊中...';
+            document.getElementById('rosterModal').style.display = 'flex';
+
+            try {
+                const res = await fetch(`/api/events/${id}/registrations`);
+                const list = await res.json();
+                if (list.length === 0) {
+                    rosterContainer.innerHTML = '<p style="color:#64748b; text-align:center;">目前無人報名</p>';
+                    return;
+                }
+                rosterContainer.innerHTML = `
+                    <table class="roster-list">
+                        <tr><th>#</th><th>姓名</th><th>電話</th></tr>
+                        ${list.map((item, idx) => `
+                            <tr>
+                                <td>${idx + 1}</td>
+                                <td>${escapeHtml(item.name)}</td>
+                                <td>${escapeHtml(item.phone)}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+            } catch (err) {
+                rosterContainer.innerHTML = '<p style="color:red;">載入名單失敗</p>';
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function escapeHtml(str) {
+            return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
+        }
+
+        fetchEvents();
+    </script>
+</body>
+</html>
