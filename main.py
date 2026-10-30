@@ -1,6 +1,8 @@
 import sqlite3
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from route.registration import router as registration_router
+app.include_router(registration_router)
 
 app = FastAPI(title="活動報名系統")
 

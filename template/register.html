@@ -1,26 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
-    <title>活動報名 </title>
+  <meta charset="UTF-8">
+  <title>報名：{{ event.title }}</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; padding: 24px; }
+    .box { max-width: 480px; margin: auto; background: #fff; padding: 24px;
+           border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+    input { width: 100%; padding: 8px; margin: 6px 0 16px; box-sizing: border-box; }
+    button { padding: 8px 24px; background: #2563eb; color: #fff;
+             border: none; border-radius: 8px; cursor: pointer; }
+    .error { color: #c0392b; }
+    .success { color: #27ae60; }
+  </style>
 </head>
 <body>
-    <h2>活動報名表單</h2>
-    
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
+  <div class="box">
+    <h2>{{ event.title }}</h2>
+    <p>{{ event.description }}</p>
+
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
     {% if success %}
-        <p style="color: green;">{{ success }}</p>
+      <p class="success">{{ success }}</p>
+    {% else %}
+      <form method="post">
+        <label>姓名</label>
+        <input type="text" name="name" required>
+
+        <label>連絡電話</label>
+        <input type="tel" name="phone" required pattern="[0-9]{8,10}"
+               title="請輸入 8~10 碼數字">
+
+        <button type="submit">送出報名</button>
+      </form>
     {% endif %}
 
-    <form method="post">
-        <label>姓名 :</label><br>
-        <input type="text" name="name" required><br><br>
-        
-        <label>連絡電話 :</label><br>
-        <input type="text" name="phone" required><br><br>
-        
-        <button type="submit">送出報名 </button>
-    </form>
+    <p><a href="/">← 回活動清單</a></p>
+  </div>
 </body>
 </html>
