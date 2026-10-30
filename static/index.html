@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>活動報名系統</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; margin: 0; padding: 24px; }
+    h1 { text-align: center; }
+    .list { max-width: 720px; margin: auto; display: grid; gap: 16px; }
+    .card { background: #fff; border-radius: 12px; padding: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+    .card h2 { margin: 0 0 8px; font-size: 20px; }
+    .card p { margin: 0 0 12px; color: #555; }
+    .count { font-size: 14px; color: #888; margin-bottom: 12px; }
+    .btn { display: inline-block; padding: 8px 20px; border-radius: 8px;
+           text-decoration: none; background: #2563eb; color: #fff; }
+    .btn.closed { background: #ccc; color: #666; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <h1>活動清單</h1>
+  <div class="list" id="list">載入中…</div>
+
+  <script>
+    async function loadEvents() {
+      const res = await fetch("/api/events");
+      const events = await res.json();
+      const list = document.getElementById("list");
+
+      if (events.length === 0) {
+        list.textContent = "目前沒有活動";
+        return;
+      }
+
+      list.innerHTML = events.map(e => `
+        <div class="card">
+          <h2>${e.title}</h2>
+          <p>${e.description || ""}</p>
+          <div class="count">目前報名人數：${e.reg_count} 人</div>
+          ${e.is_closed
+            ? `<span class="btn closed">已截止</span>`
+            : `<a class="btn" href="/register/${e.id}">前往報名</a>`}
+        </div>
+      `).join("");
+    }
+
+    loadEvents();
+  </script>
+</body>
+</html>

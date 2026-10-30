@@ -1,6 +1,7 @@
 import sqlite3
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.responses import FileResponse
 
 app = FastAPI(title="活動報名系統")
 
@@ -52,6 +53,26 @@ def close_event(event_id: int):
     conn.commit()
     conn.close()
     return {"message": f"活動編號 {event_id} 已成功截止報名"}
+
+# ===== 組員 B：活動清單 + 首頁 =====
+@app.get("/api/events")
+def list_events():
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT e.id, e.title, e.description, e.is_closed, e.created_at,
+               COUNT(r.id) AS reg_count
+        FROM events e
+        LEFT JOIN registrations r ON r.event_id = e.id
+        GROUP BY e.id
+        ORDER BY e.id DESC
+    """).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+@app.get("/")
+def home():
+    return FileResponse("static/index.html")
+
 
 # ===== 組員 C：報名功能 =====
 from route.registration import router as registration_router
