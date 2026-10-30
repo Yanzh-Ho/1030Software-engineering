@@ -1,6 +1,7 @@
 import sqlite3
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.responses import FileResponse
 
 app = FastAPI(title="活動報名系統")
 
@@ -66,3 +67,7 @@ def list_events():
     """).fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+@app.get("/")
+def home():
+    return FileResponse("static/index.html")
