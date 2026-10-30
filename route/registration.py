@@ -28,7 +28,7 @@ def show_registration_form(request: Request, event_id: int):
     if not event:
         raise HTTPException(status_code=404, detail="找不到該活動")
     return templates.TemplateResponse(
-        "register.html", {"request": request, "event": event}
+        request, "register.html", {"event": event}
     )
 
 
@@ -49,8 +49,8 @@ def submit_registration(
     if event["is_closed"]:
         conn.close()
         return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "event": event, "error": "此活動已截止報名"},
+            request, "register.html",
+            {"event": event, "error": "此活動已截止報名"},
         )
 
     dup = conn.execute(
@@ -60,8 +60,8 @@ def submit_registration(
     if dup:
         conn.close()
         return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "event": event, "error": "您已報名過此活動！"},
+            request, "register.html",
+            {"event": event, "error": "您已報名過此活動！"},
         )
 
     conn.execute(
@@ -71,8 +71,8 @@ def submit_registration(
     conn.commit()
     conn.close()
     return templates.TemplateResponse(
-        "register.html",
-        {"request": request, "event": event, "success": "報名成功！"},
+        request, "register.html",
+        {"event": event, "success": "報名成功！"},
     )
 
 
@@ -91,6 +91,6 @@ def show_registrations(request: Request, event_id: int):
     ).fetchall()
     conn.close()
     return templates.TemplateResponse(
-        "registrations.html",
-        {"request": request, "event": event, "registrations": rows},
+        request, "registrations.html",
+        {"event": event, "registrations": rows},
     )

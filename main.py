@@ -1,8 +1,6 @@
 import sqlite3
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from route.registration import router as registration_router
-app.include_router(registration_router)
 
 app = FastAPI(title="活動報名系統")
 
@@ -54,3 +52,7 @@ def close_event(event_id: int):
     conn.commit()
     conn.close()
     return {"message": f"活動編號 {event_id} 已成功截止報名"}
+
+# ===== 組員 C：報名功能 =====
+from route.registration import router as registration_router
+app.include_router(registration_router)
